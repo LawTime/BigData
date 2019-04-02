@@ -22,12 +22,12 @@ def captured_output():
     finally:
         sys.stdout = old_out
 
-def readerCsv(name):
+def reader_csv(name):
     name += ".csv"
     fichier = pd.read_csv(name, sep=';', skiprows=[0, 2], header=[0], encoding="utf8")
     return fichier
 
-essais = readerCsv("Essais")
+essais = reader_csv("Essais")
 
 # Retourne le nombre d'étudiants par groupe
 def studentsPerGroup():
@@ -37,111 +37,110 @@ def studentsPerGroup():
 
 
 # Nombre d'essaie par groupe
-def triesPerGroup():
-    triesPerGroup = essais.groupby('GROUPE').size()
-    triesPerGroup = pd.DataFrame(triesPerGroup)
-    triesPerGroup.columns = ['triesPerGroup']
-    return triesPerGroup
+def tries_per_group():
+    tries_per_group = essais.groupby('GROUPE').size()
+    tries_per_group = pd.DataFrame(tries_per_group)
+    tries_per_group.columns = ['tries_per_group']
+    return tries_per_group
 
 
-def mostTriesPerGroup():
-    mostTriesPerGroup = triesPerGroup().sort_values(by=['triesPerGroup'], ascending=False)
-    mostTriesPerGroup.columns = ['mostTriesPerGroup']
-    return mostTriesPerGroup
+def most_tries_per_group():
+    most_tries_per_group = tries_per_group().sort_values(by=['tries_per_group'], ascending=False)
+    most_tries_per_group.columns = ['most_tries_per_group']
+    return most_tries_per_group
 
 
-def averageTriesPerStudent():
-    averageTriesPerStudent = {"averageTriesPerStudent": essais.groupby('ÉTUDIANT').size().mean()}
-    return averageTriesPerStudent
+def average_tries_per_student():
+    average_tries_per_student = {"average_tries_per_student": essais.groupby('ÉTUDIANT').size().mean()}
+    return average_tries_per_student
 
 
-def averageTriesPerGroupPerStudent():
-    averageTriesPerGroupPerStudent = essais.groupby(['GROUPE', 'ÉTUDIANT']).size()
-    averageTriesPerGroupPerStudent = pd.DataFrame(averageTriesPerGroupPerStudent, columns=['TESTS']).rename(columns={'TESTS': 'averageTriesPerGroupPerStudent'})
-    averageTriesPerGroupPerStudent = averageTriesPerGroupPerStudent.groupby('GROUPE')['averageTriesPerGroupPerStudent'].mean()
-    averageTriesPerGroupPerStudent = pd.DataFrame(averageTriesPerGroupPerStudent, columns=['averageTriesPerGroupPerStudent'])
-    return averageTriesPerGroupPerStudent
+def average_tries_per_group_per_student():
+    average_tries_per_group_per_student = essais.groupby(['GROUPE', 'ÉTUDIANT']).size()
+    average_tries_per_group_per_student = pd.DataFrame(average_tries_per_group_per_student, columns=['TESTS']).rename(columns={'TESTS': 'average_tries_per_group_per_student'})
+    average_tries_per_group_per_student = average_tries_per_group_per_student.groupby('GROUPE')['average_tries_per_group_per_student'].mean()
+    average_tries_per_group_per_student = pd.DataFrame(average_tries_per_group_per_student, columns=['average_tries_per_group_per_student'])
+    return average_tries_per_group_per_student
 
 
-def mostActiveGroup():
-    mostActiveGroup = averageTriesPerGroupPerStudent().nlargest(4, 'averageTriesPerGroupPerStudent')
-    return mostActiveGroup
+def most_active_group():
+    most_active_group = average_tries_per_group_per_student().nlargest(4, 'average_tries_per_group_per_student')
+    return most_active_group
 
 
-def exerciseDonePerGroup():
-    exerciseDonePerGroup = essais.groupby('GROUPE')['EXO'].unique()
-    exerciseDonePerGroup = pd.DataFrame(exerciseDonePerGroup, columns=['EXO']).rename(columns={'EXO': 'exerciseDonePerGroup'})
-    return exerciseDonePerGroup
+def exercise_done_per_group():
+    exercise_done_per_group = essais.groupby('GROUPE')['EXO'].unique()
+    exercise_done_per_group = pd.DataFrame(exercise_done_per_group, columns=['EXO']).rename(columns={'EXO': 'exercise_done_per_group'})
+    return exercise_done_per_group
 
 
-def exerciseTriedNotSucceeded():
+def exercise_tried_not_succeeded():
     exerciseTried = essais.EXO.unique()[:-1]
     exerciseSucceeded = essais[(essais['ERREURS'] == 0) & (essais['ECHECS'] == 0)].EXO.unique()
-    exerciseTriedNotSucceeded = {"exerciseTriedNotSucceeded": dict((set(exerciseTried) | set(exerciseSucceeded)) - (set(exerciseTried) & set(exerciseSucceeded)))}
-    return exerciseTriedNotSucceeded
+    exercise_tried_not_succeeded = {"exercise_tried_not_succeeded": dict((set(exerciseTried) | set(exerciseSucceeded)) - (set(exerciseTried) & set(exerciseSucceeded)))}
+    return exercise_tried_not_succeeded
 
 
-def tryGroupByExoStudent():
-    tryGroupByExoStudent = essais.groupby(['EXO', 'ÉTUDIANT'])
-    meanTimeBetweenFirstAndLastTry = pd.DataFrame({"EXO": [], "meanTimeBetweenFirstAndLastTry": []})
-    timeByExo = 0
-    FMT = '%d/%m/%Y %H:%M:%S'
-    oldKey = ''
-    count = 0
-    for key, item in tryGroupByExoStudent:
-        if key[0] == oldKey or oldKey == '':
-            for line in item.itertuples():
-                if line.ERREURS == 0 and line.ECHECS == 0:
-                    count = count + 1
-                    timeDelta = datetime.strptime(line.HORODATEUR, FMT) - datetime.strptime(item.iat[0, 0], FMT)
-                    timeByExo = timeByExo + timeDelta.total_seconds()
-                    oldKey = key[0]
-                    break
-        else:
-            meanTimeBetweenFirstAndLastTry = meanTimeBetweenFirstAndLastTry.append({'EXO': oldKey, 'meanTimeBetweenFirstAndLastTry': timedelta(seconds=(timeByExo / count))}, ignore_index=True)
-            timeByExo = 0
-            count = 0
-            for line in item.itertuples():
-                if line.ERREURS == 0 and line.ECHECS == 0:
-                    count = count + 1
-                    timeDelta = datetime.strptime(line.HORODATEUR, FMT) - datetime.strptime(item.iat[0, 0], FMT)
-                    timeByExo = timeByExo + timeDelta.total_seconds()
-                    break
-            oldKey = ''
-    meanTimeBetweenFirstAndLastTry = meanTimeBetweenFirstAndLastTry.append({'EXO': oldKey, 'meanTimeBetweenFirstAndLastTry': timedelta(seconds=(timeByExo / count))}, ignore_index=True).set_index('EXO').sort_values('meanTimeBetweenFirstAndLastTry', ascending=False)
-    meanTimeBetweenFirstAndLastTry['meanTimeBetweenFirstAndLastTry'] = meanTimeBetweenFirstAndLastTry['meanTimeBetweenFirstAndLastTry'].astype(str)
-    return meanTimeBetweenFirstAndLastTry
-
-
-def exerciseBestSucceeded():
-    exerciseBestSucceeded = essais[(essais['ERREURS'] == 0) & (essais['ECHECS'] == 0)].groupby(['EXO', 'ÉTUDIANT']).nunique()
-    exerciseBestSucceeded = pd.DataFrame(exerciseBestSucceeded, columns=['EXO']).rename(columns={'EXO': 'exerciseBestSucceeded'}).sort_values('exerciseBestSucceeded', ascending=0)
-    return exerciseBestSucceeded.count(level=0).sort_values('exerciseBestSucceeded', ascending=False)
-
-
-def studentSucceededOnFirstTry():
-    studentSucceededOnFirstTry = essais.groupby(['ÉTUDIANT', 'EXO'])
-    count = 0
-    oldKey = ''
-    for key, item in studentSucceededOnFirstTry:
-        if item.iat[0, 5] == 0 and item.iat[0, 6] == 0 and oldKey != key[0]:
+def iter_item(item, count, time_by_exo, old_key, key, FMT):
+    for line in item.itertuples():
+        if line.ERREURS == 0 and line.ECHECS == 0:
             count = count + 1
-            oldKey = key[0]
+            time_delta = datetime.strptime(line.HORODATEUR, FMT) - datetime.strptime(item.iat[0, 0], FMT)
+            time_by_exo = time_by_exo + time_delta.total_seconds()
+            old_key = key[0]
+            break
+    return item, count, time_by_exo, old_key, key, FMT
 
-    studentSucceededOnFirstTry = {"studentSucceededOnFirstTry": count}
-    return studentSucceededOnFirstTry
-
-
-def weekdaysMostTries():
+def try_group_by_exo_student():
+    try_group_by_exo_student = essais.groupby(['EXO', 'ÉTUDIANT'])
+    mean_time_between_first_and_last_try = pd.DataFrame({"EXO": [], "mean_time_between_first_and_last_try": []})
+    time_by_exo = 0
     FMT = '%d/%m/%Y %H:%M:%S'
-    weekdaysMostTries = pd.DataFrame(pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.day_name()).groupby('HORODATEUR').size().sort_values(ascending=False).to_frame().rename(columns={0: 'weekdaysMostTries'})
-    return weekdaysMostTries
+    old_key = ''
+    count = 0
+    for key, item in try_group_by_exo_student:
+        if key[0] == old_key or old_key == '':
+            item, count, time_by_exo, old_key, key, FMT = iter_item(item, count, time_by_exo, old_key, key, FMT)
+        else:
+            mean_time_between_first_and_last_try = mean_time_between_first_and_last_try.append({'EXO': old_key, 'mean_time_between_first_and_last_try': timedelta(seconds=(time_by_exo / count))}, ignore_index=True)
+            time_by_exo = 0
+            count = 0
+            item, count, time_by_exo, old_key, key, FMT = iter_item(item, count, time_by_exo, old_key, key, FMT)
+            old_key = ''
+    mean_time_between_first_and_last_try = mean_time_between_first_and_last_try.append({'EXO': old_key, 'mean_time_between_first_and_last_try': timedelta(seconds=(time_by_exo / count))}, ignore_index=True).set_index('EXO').sort_values('mean_time_between_first_and_last_try', ascending=False)
+    mean_time_between_first_and_last_try['mean_time_between_first_and_last_try'] = mean_time_between_first_and_last_try['mean_time_between_first_and_last_try'].astype(str)
+    return mean_time_between_first_and_last_try
 
 
-def hoursMostTries():
+def exercise_best_succeeded():
+    exercise_best_succeeded = essais[(essais['ERREURS'] == 0) & (essais['ECHECS'] == 0)].groupby(['EXO', 'ÉTUDIANT']).nunique()
+    exercise_best_succeeded = pd.DataFrame(exercise_best_succeeded, columns=['EXO']).rename(columns={'EXO': 'exercise_best_succeeded'}).sort_values('exercise_best_succeeded', ascending=0)
+    return exercise_best_succeeded.count(level=0).sort_values('exercise_best_succeeded', ascending=False)
+
+
+def student_succeeded_on_first_try():
+    student_succeeded_on_first_try = essais.groupby(['ÉTUDIANT', 'EXO'])
+    count = 0
+    old_key = ''
+    for key, item in student_succeeded_on_first_try:
+        if item.iat[0, 5] == 0 and item.iat[0, 6] == 0 and old_key != key[0]:
+            count = count + 1
+            old_key = key[0]
+
+    student_succeeded_on_first_try = {"student_succeeded_on_first_try": count}
+    return student_succeeded_on_first_try
+
+
+def weekdays_most_tries():
     FMT = '%d/%m/%Y %H:%M:%S'
-    hoursMostTries = pd.Series(pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce')).dt.hour.to_frame().groupby('HORODATEUR').size().sort_values(ascending=False).to_frame().rename(columns={0: 'hoursMostTries'})
-    return hoursMostTries
+    weekdays_most_tries = pd.DataFrame(pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.day_name()).groupby('HORODATEUR').size().sort_values(ascending=False).to_frame().rename(columns={0: 'weekdays_most_tries'})
+    return weekdays_most_tries
+
+
+def hours_most_tries():
+    FMT = '%d/%m/%Y %H:%M:%S'
+    hours_most_tries = pd.Series(pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce')).dt.hour.to_frame().groupby('HORODATEUR').size().sort_values(ascending=False).to_frame().rename(columns={0: 'hours_most_tries'})
+    return hours_most_tries
 
 
 def default_to_regular(d):
@@ -149,15 +148,15 @@ def default_to_regular(d):
         d = {k: default_to_regular(v) for k, v in d.items()}
     return d
 
-def weekdaysMostTriesByHours():
+def weekdays_most_tries_by_hours():
     FMT = '%d/%m/%Y %H:%M:%S'
-    weekdaysMostTriesByHours = pd.DataFrame({"hours": [], "weekday": []})
-    weekdaysMostTriesByHours['hours'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.hour
-    weekdaysMostTriesByHours['weekday'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.day_name()
-    weekdaysMostTriesByHours = weekdaysMostTriesByHours.groupby(['weekday', 'hours']).size().to_frame().rename(columns={0: "weekdaysMostTriesByHours"})
-    weekdaysMostTriesByHours = weekdaysMostTriesByHours.reset_index().sort_values(['weekday', 'weekdaysMostTriesByHours'], ascending=False).set_index(['weekday', 'hours'])
+    weekdays_most_tries_by_hours = pd.DataFrame({"hours": [], "weekday": []})
+    weekdays_most_tries_by_hours['hours'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.hour
+    weekdays_most_tries_by_hours['weekday'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.day_name()
+    weekdays_most_tries_by_hours = weekdays_most_tries_by_hours.groupby(['weekday', 'hours']).size().to_frame().rename(columns={0: "weekdays_most_tries_by_hours"})
+    weekdays_most_tries_by_hours = weekdays_most_tries_by_hours.reset_index().sort_values(['weekday', 'weekdays_most_tries_by_hours'], ascending=False).set_index(['weekday', 'hours'])
     results = defaultdict(lambda: defaultdict(dict))
-    for index, value in weekdaysMostTriesByHours.itertuples():
+    for index, value in weekdays_most_tries_by_hours.itertuples():
         for i, key in enumerate(index):
             if i == 0:
                 nested = results[key]
@@ -166,63 +165,63 @@ def weekdaysMostTriesByHours():
             else:
                 nested = nested[key]
     results = default_to_regular(results)
-    weekdaysMostTriesByHours = {"weekdaysMostTriesByHours": results}
-    weekdaysMostTriesByHours = pd.DataFrame.from_dict(weekdaysMostTriesByHours)
-    return weekdaysMostTriesByHours
+    weekdays_most_tries_by_hours = {"weekdays_most_tries_by_hours": results}
+    weekdays_most_tries_by_hours = pd.DataFrame.from_dict(weekdays_most_tries_by_hours)
+    return weekdays_most_tries_by_hours
 
 
-def examsSpikeUsage():
+def exams_spike_usage():
     FMT = '%d/%m/%Y %H:%M:%S'
-    examsSpikeUsage = pd.DataFrame({"day": []})
-    examsSpikeUsage['day'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.floor('d')
-    examsSpikeUsage = examsSpikeUsage.groupby('day').size().to_frame().rename(columns={0: 'examsSpikeUsage'})
-    usageMean = examsSpikeUsage['examsSpikeUsage'].mean()
-    if examsSpikeUsage.loc['2018-10-22':'2018-10-26']['examsSpikeUsage'].mean() > usageMean or examsSpikeUsage.loc['2018-12-10':'2018-12-14']['examsSpikeUsage'].mean() > usageMean:
+    exams_spike_usage = pd.DataFrame({"day": []})
+    exams_spike_usage['day'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.floor('d')
+    exams_spike_usage = exams_spike_usage.groupby('day').size().to_frame().rename(columns={0: 'exams_spike_usage'})
+    usage_mean = exams_spike_usage['exams_spike_usage'].mean()
+    if exams_spike_usage.loc['2018-10-22':'2018-10-26']['exams_spike_usage'].mean() > usage_mean or exams_spike_usage.loc['2018-12-10':'2018-12-14']['exams_spike_usage'].mean() > usage_mean:
         results = 'Spike Detected'
     else:
         results = 'Spike Not Detected'
 
-    isExamsSpikeUsage = {"examsSpikeUsage": results}
-    return isExamsSpikeUsage
+    is_exams_spike_usage = {"exams_spike_usage": results}
+    return is_exams_spike_usage
 
 
-def dayMostTries():
+def day_most_tries():
     FMT = '%d/%m/%Y %H:%M:%S'
-    dayMostTries = pd.DataFrame({"day": []})
-    dayMostTries['day'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.floor('d')
-    dayMostTries = dayMostTries.groupby('day').size().to_frame().rename(columns={0: 'dayMostTries'}).sort_values(['dayMostTries'], ascending=False).head(1)
-    dayMostTries.index = dayMostTries.index.map(str)
-    return dayMostTries
+    day_most_tries = pd.DataFrame({"day": []})
+    day_most_tries['day'] = pd.to_datetime(essais['HORODATEUR'], format=FMT, errors='coerce').dt.floor('d')
+    day_most_tries = day_most_tries.groupby('day').size().to_frame().rename(columns={0: 'day_most_tries'}).sort_values(['day_most_tries'], ascending=False).head(1)
+    day_most_tries.index = day_most_tries.index.map(str)
+    return day_most_tries
 
 
-def studentMostTries():
-    studentMostTries = essais.groupby(['ÉTUDIANT']).size()
-    studentMostTries = pd.DataFrame(studentMostTries, columns=['EXO']).rename(columns={'EXO': 'studentMostTries'}).sort_values('studentMostTries', ascending=0).head(1)
-    return studentMostTries
+def student_most_tries():
+    student_most_tries = essais.groupby(['ÉTUDIANT']).size()
+    student_most_tries = pd.DataFrame(student_most_tries, columns=['EXO']).rename(columns={'EXO': 'student_most_tries'}).sort_values('student_most_tries', ascending=0).head(1)
+    return student_most_tries
 
 
-def studentMostSuccess():
-    studentMostSuccess = essais[(essais['ERREURS'] == 0) & (essais['ECHECS'] == 0)].groupby(['ÉTUDIANT', 'EXO']).nunique()
-    studentMostSuccess = pd.DataFrame(studentMostSuccess, columns=['EXO']).rename(columns={'EXO': 'studentMostSuccess'}).sort_values('studentMostSuccess', ascending=0)
-    studentMostSuccess = studentMostSuccess.count(level=0).sort_values('studentMostSuccess', ascending=False).head(1)
-    return studentMostSuccess
+def student_most_success():
+    student_most_success = essais[(essais['ERREURS'] == 0) & (essais['ECHECS'] == 0)].groupby(['ÉTUDIANT', 'EXO']).nunique()
+    student_most_success = pd.DataFrame(student_most_success, columns=['EXO']).rename(columns={'EXO': 'student_most_success'}).sort_values('student_most_success', ascending=0)
+    student_most_success = student_most_success.count(level=0).sort_values('student_most_success', ascending=False).head(1)
+    return student_most_success
 
 
-'''def mostCommonSyntaxError():
-    mostCommonSyntaxError = essais
-    for index, row in mostCommonSyntaxError.iterrows():
+'''def most_common_syntax_error():
+    most_common_syntax_error = essais
+    for index, row in most_common_syntax_error.iterrows():
         try:
             def input(optional_arg=''):
                 return
             with captured_output() as out:
                 subprocess.call(['row.CODE'])
         except Exception as e:
-            mostCommonSyntaxError.loc[index, 'ERRORS'] = e
+            most_common_syntax_error.loc[index, 'ERRORS'] = e
             pass
-    mostCommonSyntaxError['ERRORS'] = mostCommonSyntaxError['ERRORS'].astype(str)
-    mostCommonSyntaxError = mostCommonSyntaxError[~mostCommonSyntaxError['ERRORS'].isin(['nan'])]
-    mostCommonSyntaxError = mostCommonSyntaxError.groupby(['ERRORS']).size().to_frame().dropna().rename(columns={0: 'mostCommonSyntaxError'}).sort_values('mostCommonSyntaxError', ascending=False)
-    return mostCommonSyntaxError'''
+    most_common_syntax_error['ERRORS'] = most_common_syntax_error['ERRORS'].astype(str)
+    most_common_syntax_error = most_common_syntax_error[~most_common_syntax_error['ERRORS'].isin(['nan'])]
+    most_common_syntax_error = most_common_syntax_error.groupby(['ERRORS']).size().to_frame().dropna().rename(columns={0: 'most_common_syntax_error'}).sort_values('most_common_syntax_error', ascending=False)
+    return most_common_syntax_error'''
 
 
 def json_format(var):
@@ -239,24 +238,24 @@ def json_export_file(var):
 
 
 result = json_format(studentsPerGroup())
-result = merge(result, json_format(triesPerGroup()))
-result = merge(result, json_format(mostTriesPerGroup()))
-result = merge(result, json_format(averageTriesPerStudent()))
-result = merge(result, json_format(averageTriesPerGroupPerStudent()))
-result = merge(result, json_format(mostActiveGroup()))
-result = merge(result, json_format(exerciseDonePerGroup()))
-result = merge(result, json_format(exerciseTriedNotSucceeded()))
-result = merge(result, json_format(tryGroupByExoStudent()))
-result = merge(result, json_format(exerciseBestSucceeded()))
-result = merge(result, json_format(studentSucceededOnFirstTry()))
-result = merge(result, json_format(weekdaysMostTries()))
-result = merge(result, json_format(hoursMostTries()))
-result = merge(result, json_format(weekdaysMostTriesByHours()))
-result = merge(result, json_format(examsSpikeUsage()))
-result = merge(result, json_format(dayMostTries()))
-result = merge(result, json_format(studentMostTries()))
-result = merge(result, json_format(studentMostSuccess()))
-#result = merge(result, json_format(mostCommonSyntaxError()))
+result = merge(result, json_format(tries_per_group()))
+result = merge(result, json_format(most_tries_per_group()))
+result = merge(result, json_format(average_tries_per_student()))
+result = merge(result, json_format(average_tries_per_group_per_student()))
+result = merge(result, json_format(most_active_group()))
+result = merge(result, json_format(exercise_done_per_group()))
+result = merge(result, json_format(exercise_tried_not_succeeded()))
+result = merge(result, json_format(try_group_by_exo_student()))
+result = merge(result, json_format(exercise_best_succeeded()))
+result = merge(result, json_format(student_succeeded_on_first_try()))
+result = merge(result, json_format(weekdays_most_tries()))
+result = merge(result, json_format(hours_most_tries()))
+result = merge(result, json_format(weekdays_most_tries_by_hours()))
+result = merge(result, json_format(exams_spike_usage()))
+result = merge(result, json_format(day_most_tries()))
+result = merge(result, json_format(student_most_tries()))
+result = merge(result, json_format(student_most_success()))
+#result = merge(result, json_format(most_common_syntax_error()))
 
 #print(result)
 
